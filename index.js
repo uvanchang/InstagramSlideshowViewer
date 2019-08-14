@@ -9,14 +9,15 @@ const getMediaFromPost = async(postID) => {
     method: 'POST',
     body: formBody,
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json'
     }
   });
   await response.json().then(data => {
 
     try {
       for(var picture of data.graphql.shortcode_media.edge_sidecar_to_children.edges) {
-	if(picture.node.is_video) { 
+	       if(picture.node.is_video) {
           media.push(picture.node.video_url);
         } else {
           media.push(picture.node.display_url);
@@ -29,9 +30,6 @@ const getMediaFromPost = async(postID) => {
         media.push(data.graphql.shortcode_media.display_url);
       }
     }
-    for(m of media){
-      console.log(m);
-    }
 
   });
 
@@ -42,7 +40,7 @@ const getMediaFromPost = async(postID) => {
 }
 
 function showSlides() {
-  
+
   var image = document.getElementsByTagName('img')[0];
   var video = document.getElementsByTagName('video')[0];
   if(image.src) {
@@ -69,14 +67,10 @@ function showSlides() {
 }
 
 document.getElementsByTagName('video')[0].onended = function(e) {
-
   showSlides();
-
 };
 
-// TODO: fix so it cycles posts in postIDs
-
-const postIDs = ['BpnZWq0BlJm', 'B1Cy-hppWXa'];
+const postIDs = ['BpnZWq0BlJm', 'B1H0UQsJDU9'];
 var media = [];
 var mediaIndex = 0;
 var firstRun = true;
