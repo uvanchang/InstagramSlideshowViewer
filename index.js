@@ -16,10 +16,18 @@ const getMediaFromPost = async(postID) => {
 
     try {
       for(var picture of data.graphql.shortcode_media.edge_sidecar_to_children.edges) {
-        media.push(picture.node.display_url);
+	if(picture.node.is_video) { 
+          media.push(picture.node.video_url);
+        } else {
+          media.push(picture.node.display_url);
+        }
       }
     } catch {
-      media.push(data.graphql.shortcode_media.display_url);
+      if(data.graphql.shortcode_media.is_video) {
+        media.push(data.graphql.shortcode_media.video_url);
+      } else {
+        media.push(data.graphql.shortcode_media.display_url);
+      }
     }
     for(m of media){
       console.log(m);
@@ -34,20 +42,52 @@ const getMediaFromPost = async(postID) => {
 }
 
 function showSlides() {
-  console.log(images.length);
-  var i;
-  imageIndex++;
-  if (imageIndex > images.length) {imageIndex = 1;}
-  document.getElementsByTagName('img')[0].src = images[imageIndex - 1];
-  setTimeout(showSlides, 5000); // Change image every 5 seconds
+  
+  var image = document.getElementsByTagName('img')[0];
+  var video = document.getElementsByTagName('video')[0];
+  if(image.src) {
+    image.style.display = 'none';
+  }
+  if(video.firstChild) {
+    video.style.display = 'none';
+    video.removeChild(video.firstChild);
+  }
+  mediaIndex++;
+  if(mediaIndex > media.length) {mediaIndex = 1;}
+  if(media[mediaIndex - 1].includes('mp4')) {
+    video.style.display = 'grid';
+    var source = document.createElement('source');
+    source.setAttribute('src', media[mediaIndex - 1]);
+    video.appendChild(source);
+    video.load();
+    video.play();
+  } else {
+    image.style.display = 'grid';
+    image.src = media[mediaIndex - 1];
+    setTimeout(showSlides, 5000); // Change image every 5 seconds
+  }
 }
 
-const postID = ''
-var images = [];
-var imageIndex = 0;
+document.getElementsByTagName('video')[0].onended = function(e) {
 
-getMediaFromPost(postID)
+  showSlides();
+
+};
+
+// TODO: fix so it cycles posts in postIDs
+
+const postIDs = ['BpnZWq0BlJm', 'B1Cy-hppWXa'];
+var media = [];
+var mediaIndex = 0;
+var firstRun = true;
+
+for(var i = 0; i < postIDs.length; i++) {
+  getMediaFromPost(postIDs[i])
   .then(result => {
-    images.push(...result);
-    showSlides()
+    media.push(...result);
+    if(firstRun) {
+      firstRun = false;
+      showSlides();
+    }
   });
+}
