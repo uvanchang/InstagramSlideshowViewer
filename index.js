@@ -2,6 +2,7 @@ const postIDs = [];
 var media = [];
 var mediaIndex = 0;
 var firstRun = true;
+var id = '';
 
 window.onload = async() => {
 
@@ -30,14 +31,20 @@ window.onload = async() => {
 
 const isValidUsername = async(username) => {
 
-  if(username === '' || username.includes(' ')) {
-    return false;
+  try {
+    if(username === '' || username.includes(' ')) {
+      return false;
+    }
+  } catch(err) {
+    // clicked cancel button on prompt
+    location.reload();
   }
 
   var valid = true;
 
   await fetch('https://instagram.com/' + username)
     .then(function(response) {
+      // TODO: fix for private profiles
       if(!response.ok) {
         valid = false;
       }
@@ -62,11 +69,11 @@ const getFirstPostIDsSet = async(username) => {
   });
   await response.json().then(data => {
 
-    for(var i = 0; i < data.length; i++) {
+    // TODO: get the end_cursor and store
+    id = data.id;
+    var firstPostIDs = data.postIDs;
 
-      postIDs.push(data[i]);
-
-    }
+    postIDs.push(...firstPostIDs);
 
   });
 
@@ -88,28 +95,10 @@ const getMediaFromPost = async(postID) => {
     }
   });
   await response.json().then(data => {
-
-    try {
-      for(var picture of data.graphql.shortcode_media.edge_sidecar_to_children.edges) {
-	       if(picture.node.is_video) {
-          media.push(picture.node.video_url);
-        } else {
-          media.push(picture.node.display_url);
-        }
-      }
-    } catch {
-      if(data.graphql.shortcode_media.is_video) {
-        media.push(data.graphql.shortcode_media.video_url);
-      } else {
-        media.push(data.graphql.shortcode_media.display_url);
-      }
-    }
-
+    media = data;
   });
 
-  return new Promise(function(resolve, reject) {
-    resolve(media);
-  });
+  return media;
 
 }
 
