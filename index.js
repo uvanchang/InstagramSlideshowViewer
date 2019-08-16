@@ -1,3 +1,77 @@
+const postIDs = [];
+var media = [];
+var mediaIndex = 0;
+var firstRun = true;
+
+window.onload = async() => {
+
+  var username = prompt("Enter the username of the Instagram page you would like to slideshow.");
+  var isValid = await isValidUsername(username);
+
+  while(!isValid) {
+    username = prompt("Invalid Username.\nEnter the username of the Instagram page you would like to slideshow.");
+    isValid = await isValidUsername(username);
+  }
+
+  await getFirstPostIDsSet(username);
+
+  for(var i = 0; i < postIDs.length; i++) {
+    getMediaFromPost(postIDs[i])
+      .then(result => {
+        media.push(...result);
+        if(firstRun) {
+          firstRun = false;
+          showSlides();
+        }
+    });
+  }
+
+}
+
+const isValidUsername = async(username) => {
+
+  if(username === '' || username.includes(' ')) {
+    return false;
+  }
+
+  var valid = true;
+
+  await fetch('https://instagram.com/' + username)
+    .then(function(response) {
+      if(!response.ok) {
+        valid = false;
+      }
+    });
+
+  return valid;
+
+}
+
+const getFirstPostIDsSet = async(username) => {
+
+  var formBody = new URLSearchParams();
+  formBody.append('pid', username);
+
+  const response = await fetch('https://instagram-slideshow-viewer.glitch.me/pid', {
+    method: 'POST',
+    body: formBody,
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json'
+    }
+  });
+  await response.json().then(data => {
+
+    for(var i = 0; i < data.length; i++) {
+
+      postIDs.push(data[i]);
+
+    }
+
+  });
+
+}
+
 const getMediaFromPost = async(postID) => {
 
   var media = []
@@ -68,20 +142,4 @@ function showSlides() {
 
 document.getElementsByTagName('video')[0].onended = function(e) {
   showSlides();
-};
-
-const postIDs = ['BpnZWq0BlJm', 'B1H0UQsJDU9'];
-var media = [];
-var mediaIndex = 0;
-var firstRun = true;
-
-for(var i = 0; i < postIDs.length; i++) {
-  getMediaFromPost(postIDs[i])
-  .then(result => {
-    media.push(...result);
-    if(firstRun) {
-      firstRun = false;
-      showSlides();
-    }
-  });
 }
