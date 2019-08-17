@@ -1,3 +1,4 @@
+const queryHash = 'f2405b236d85e8296cf30347c9f08c2a';
 var postIDs = [];
 var media = [];
 var mediaIndex = 0;
@@ -5,6 +6,7 @@ var id = '';
 var endCursor = '';
 var hasNextPage = false;
 var first = true;
+var isGettingMore = false;
 
 var startT;
 
@@ -24,7 +26,7 @@ window.onload = async() => {
   await getFirstPostIDsSet(username);
   //console.log('finished getting first set:' + (new Date() - startT));
 
-  Promise.all(postIDs.map(item => getMediaFromPost(item)));
+  await Promise.all(postIDs.map(item => getMediaFromPost(item)));
 
 }
 
@@ -39,7 +41,6 @@ async function isValidUsername(username) {
   }
 
   var valid = true;
-
   await fetch('https://instagram.com/' + username + '?__a=1')
     .then(function(response) {
       return response.json();
@@ -105,8 +106,56 @@ async function getMediaFromPost(postID) {
 
 }
 
+async function getNextPosts() {
+
+  isGettingMore = true;
+
+  var url = new URL('https://instagram.com/graphql/query/')
+  var params = {
+    query_hash:queryHash,
+    variables:JSON.stringify({
+      id:id,
+      first:12,
+      after:endCursor
+    })};
+  url.search = new URLSearchParams(params)
+
+  const response = await fetch(url);
+  await response.json().then(data => {
+
+    endCursor = data.data.user.edge_owner_to_timeline_media.page_info.end_cursor;
+    hasNextPage = data.data.user.edge_owner_to_timeline_media.page_info.has_next_page;
+    const edges = data.data.user.edge_owner_to_timeline_media.edges;
+
+    for(var i = 0; i < edges.length; i++) {
+
+      try { // has multiple media
+        for(var picture of edges[i].node.edge_sidecar_to_children.edges) {
+  	       if(picture.node.is_video) {
+            media.push(picture.node.video_url);
+          } else {
+            media.push(picture.node.display_url);
+          }
+        }
+      } catch(err) { // has single media
+        if(edges[i].node.is_video) {
+          media.push(edges[i].node.video_url);
+        } else {
+          media.push(edges[i].node.display_url);
+        }
+      }
+
+    }
+
+    isGettingMore = false;
+    console.log('stopped')
+
+  });
+
+}
+
 function showSlides() {
-  // TODO: add more posts when low
+  console.log('new post');
   var image = document.getElementsByTagName('img')[0];
   var video = document.getElementsByTagName('video')[0];
   if(image.src) {
@@ -117,7 +166,31 @@ function showSlides() {
     video.removeChild(video.firstChild);
   }
   mediaIndex++;
-  if(mediaIndex > media.length) {mediaIndex = 1;}
+  if(mediaIndex > media.length) {
+    if(isGettingMore) {
+      console.log('in waiting');
+      document.getElementById('loader').style.display = 'block';
+
+      function waitUntilReady() {
+        if(isGettingMore) {
+          setTimeout(function() {
+            console.log('in loop');
+            waitUntilReady();
+          }, 1000);
+        }
+      }
+      // TODO: fix bug when going through slides too fast. runs line 194 when out of bounds
+      waitUntilReady();
+      document.getElementById('loader').style.display = 'none';
+    } else {
+      mediaIndex = 1;
+    }
+  }
+  if(mediaIndex + 4 == media.length && hasNextPage) {
+    console.log('started');
+    getNextPosts();
+  }
+  console.log(mediaIndex + " " + media.length);
   if(media[mediaIndex - 1].includes('mp4')) {
     video.style.display = 'grid';
     var source = document.createElement('source');
@@ -128,7 +201,7 @@ function showSlides() {
   } else {
     image.style.display = 'grid';
     image.src = media[mediaIndex - 1];
-    setTimeout(showSlides, 5000); // Change to next media after 5 seconds
+    setTimeout(showSlides, 1000); // Change to next media after 5 seconds
   }
 }
 
