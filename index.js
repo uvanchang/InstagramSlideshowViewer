@@ -1,8 +1,10 @@
-const postIDs = [];
+var postIDs = [];
 var media = [];
 var mediaIndex = 0;
-var firstRun = true;
 var id = '';
+var endCursor = '';
+var hasNextPage = false;
+var first = true;
 
 var startT;
 
@@ -18,40 +20,34 @@ window.onload = async() => {
     username = prompt("Invalid Username.\nEnter the username of the Instagram page you would like to slideshow.");
     isValid = await isValidUsername(username);
   }
-  console.log('finished checking valid:' + (new Date() - startT));
+  //console.log('finished checking valid:' + (new Date() - startT));
   await getFirstPostIDsSet(username);
-  console.log('finished getting first set:' + (new Date() - startT));
-  var promises = [];
+  //console.log('finished getting first set:' + (new Date() - startT));
 
-  for(var i = 0; i < postIDs.length; i++) {
-    promises.push(getMediaFromPost(postIDs[i]));
-  }
-
-  Promise.all(promises);
+  Promise.all(postIDs.map(item => getMediaFromPost(item)));
 
 }
 
-const isValidUsername = async(username) => {
+async function isValidUsername(username) {
 
   try {
     if(username === '' || username.includes(' ')) {
       return false;
     }
-  } catch(err) {
-    // clicked cancel button on prompt
+  } catch(err) { // clicked cancel button on prompt
     location.reload();
   }
 
   var valid = true;
-  console.log('start fetch:' + (new Date() - startT));
+
   await fetch('https://instagram.com/' + username + '?__a=1')
     .then(function(response) {
       return response.json();
-    }).then(function(response) { // real profile
+    }).then(function(response) { // profile exists
       if(response.graphql.user.is_private) {
         valid = false;
       }
-    }).catch(function(response) { // not real profile
+    }).catch(function(response) { // profile does not exist
       valid = false;
     });
 
@@ -59,59 +55,58 @@ const isValidUsername = async(username) => {
 
 }
 
-const getFirstPostIDsSet = async(username) => {
+async function getFirstPostIDsSet(username) {
 
-  var formBody = new URLSearchParams();
-  formBody.append('pid', username);
-
-  const response = await fetch('https://instagram-slideshow-viewer.glitch.me/pid', {
-    method: 'POST',
-    body: formBody,
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Accept': 'application/json'
-    }
-  });
+  const response = await fetch('https://instagram.com/' + username + '?__a=1');
   await response.json().then(data => {
 
-    // TODO: get the end_cursor and store
-    id = data.id;
-    var firstPostIDs = data.postIDs;
+    id = data.graphql.user.id;
+    endCursor = data.graphql.user.edge_owner_to_timeline_media.page_info.end_cursor;
+    hasNextPage = data.graphql.user.edge_owner_to_timeline_media.page_info.has_next_page;
+    const edges = data.graphql.user.edge_owner_to_timeline_media.edges;
 
-    postIDs.push(...firstPostIDs);
+    for(var i = 0; i < edges.length; i++) {
+      postIDs.push(edges[i].node.shortcode);
+    }
 
   });
 
 }
 
-const getMediaFromPost = async(postID) => {
+async function getMediaFromPost(postID) {
 
-  var links = []
-
-  var formBody = new URLSearchParams();
-  formBody.append('p', postID);
-
-  const response = await fetch('https://instagram-slideshow-viewer.glitch.me/p', {
-    method: 'POST',
-    body: formBody,
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Accept': 'application/json'
-    }
-  });
+  const response = await fetch('https://instagram.com/p/' + postID + '?__a=1');
   await response.json().then(data => {
-    media.push(...data);
-    if(firstRun) {
-      firstRun = false;
-      console.log('finished first post:' + (new Date() - startT));
-      showSlides();
+
+    try { // has multiple media
+      for(var picture of data.graphql.shortcode_media.edge_sidecar_to_children.edges) {
+	       if(picture.node.is_video) {
+          media.push(picture.node.video_url);
+        } else {
+          media.push(picture.node.display_url);
+        }
+      }
+    } catch(err) { // has single media
+      if(data.graphql.shortcode_media.is_video) {
+        media.push(data.graphql.shortcode_media.video_url);
+      } else {
+        media.push(data.graphql.shortcode_media.display_url);
+      }
     }
+
   });
+
+  if(first) {
+    first = false;
+    console.log('finished first post:' + (new Date() - startT));
+    document.getElementById('loader').style.display = 'none';
+    showSlides();
+  }
 
 }
 
 function showSlides() {
-
+  // TODO: add more posts when low
   var image = document.getElementsByTagName('img')[0];
   var video = document.getElementsByTagName('video')[0];
   if(image.src) {
@@ -133,10 +128,11 @@ function showSlides() {
   } else {
     image.style.display = 'grid';
     image.src = media[mediaIndex - 1];
-    setTimeout(showSlides, 5000); // Change image every 5 seconds
+    setTimeout(showSlides, 5000); // Change to next media after 5 seconds
   }
 }
 
+// Change to next media after video ends
 document.getElementsByTagName('video')[0].onended = function(e) {
   showSlides();
 }
