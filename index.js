@@ -4,28 +4,30 @@ var mediaIndex = 0;
 var firstRun = true;
 var id = '';
 
+var startT;
+
 window.onload = async() => {
 
   var username = prompt("Enter the username of the Instagram page you would like to slideshow.");
+
+  startT = new Date();
+
   var isValid = await isValidUsername(username);
 
   while(!isValid) {
     username = prompt("Invalid Username.\nEnter the username of the Instagram page you would like to slideshow.");
     isValid = await isValidUsername(username);
   }
-
+  console.log('finished checking valid:' + (new Date() - startT));
   await getFirstPostIDsSet(username);
+  console.log('finished getting first set:' + (new Date() - startT));
+  var promises = [];
 
   for(var i = 0; i < postIDs.length; i++) {
-    getMediaFromPost(postIDs[i])
-      .then(result => {
-        media.push(...result);
-        if(firstRun) {
-          firstRun = false;
-          showSlides();
-        }
-    });
+    promises.push(getMediaFromPost(postIDs[i]));
   }
+
+  Promise.all(promises);
 
 }
 
@@ -41,13 +43,16 @@ const isValidUsername = async(username) => {
   }
 
   var valid = true;
-
-  await fetch('https://instagram.com/' + username)
+  console.log('start fetch:' + (new Date() - startT));
+  await fetch('https://instagram.com/' + username + '?__a=1')
     .then(function(response) {
-      // TODO: fix for private profiles
-      if(!response.ok) {
+      return response.json();
+    }).then(function(response) { // real profile
+      if(response.graphql.user.is_private) {
         valid = false;
       }
+    }).catch(function(response) { // not real profile
+      valid = false;
     });
 
   return valid;
@@ -81,7 +86,7 @@ const getFirstPostIDsSet = async(username) => {
 
 const getMediaFromPost = async(postID) => {
 
-  var media = []
+  var links = []
 
   var formBody = new URLSearchParams();
   formBody.append('p', postID);
@@ -95,10 +100,13 @@ const getMediaFromPost = async(postID) => {
     }
   });
   await response.json().then(data => {
-    media = data;
+    media.push(...data);
+    if(firstRun) {
+      firstRun = false;
+      console.log('finished first post:' + (new Date() - startT));
+      showSlides();
+    }
   });
-
-  return media;
 
 }
 
