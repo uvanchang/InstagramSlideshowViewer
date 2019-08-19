@@ -4,6 +4,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
 
+    /* TODO: fix the small black bar at the bottom on Mac */
+
     * {
       line-height: 0;
     }
@@ -15,6 +17,7 @@
       background: black;
     }
 
+    /* TODO: fix so that smaller images fit the screen */
     img {
       padding: 0;
       display: none;
@@ -30,6 +33,7 @@
       transform: translate(-50%, -50%);
     }
 
+    /* TODO: fix so that videos are centered with no scroll bar */
     video {
       padding: 0;
       display: none;
@@ -53,9 +57,37 @@
       transform: translate(-50%, -50%);
     }
 
+    /* Animation for loader */
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
+    }
+
+    /* Next & previous buttons */
+    .prev, .next {
+      cursor: pointer;
+      position: absolute;
+      top: 50%;
+      width: auto;
+      margin-top: -22px;
+      padding: 16px;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+      transition: 0.6s ease;
+      border-radius: 0 3px 3px 0;
+      user-select: none;
+    }
+
+    /* Position the "next button" to the right */
+    .next {
+      right: 0;
+      border-radius: 3px 0 0 3px;
+    }
+
+    /* On hover, add a black background color with a little bit see-through */
+    .prev:hover, .next:hover {
+      background-color: rgba(0,0,0,0.8);
     }
 
   </style>
@@ -65,6 +97,8 @@
   <div id="loader"></div>
   <img>
   <video muted></video>
+  <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+  <a class="next" onclick="plusSlides(1)">&#10095;</a>
 
   <script type="text/javascript" src="./jquery-3.4.1.min.js"></script>
   <script type="text/javascript" src="./index.js"></script>
