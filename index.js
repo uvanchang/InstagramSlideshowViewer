@@ -1,25 +1,27 @@
 const queryHash = 'f2405b236d85e8296cf30347c9f08c2a';
-var postIDs = [];
-var media = [];
-var mediaIndex = 0;
-var id = '';
-var endCursor = '';
-var hasNextPage = false;
-var first = true;
-var isGettingMore = false;
+var postIDs = [], 
+    media = [], 
+    mediaIndex = 0, 
+    id = '', 
+    endCursor = '', 
+    hasNextPage = false, 
+    first = true, 
+    isGettingMore = false, 
+    isWaiting = false, 
+    timer;
 
 var startT;
 
 window.onload = async() => {
 
-  var username = prompt("Enter the username of the Instagram page you would like to slideshow.");
+  var username = prompt("Enter the username of the public Instagram profile you would like to slideshow.");
 
   startT = new Date();
 
   var isValid = await isValidUsername(username);
 
   while(!isValid) {
-    username = prompt("Invalid Username.\nEnter the username of the Instagram page you would like to slideshow.");
+    username = prompt("Invalid Username or profile is private.\nEnter the username of the public Instagram page you would like to slideshow.");
     isValid = await isValidUsername(username);
   }
   //console.log('finished checking valid:' + (new Date() - startT));
@@ -107,10 +109,10 @@ async function getMediaFromPost(postID) {
 }
 
 async function getNextPosts() {
-
+  
   isGettingMore = true;
 
-  var url = new URL('https://instagram.com/graphql/query/')
+  var url = new URL('https://instagram.com/graphql/query/');
   var params = {
     query_hash:queryHash,
     variables:JSON.stringify({
@@ -148,14 +150,13 @@ async function getNextPosts() {
     }
 
     isGettingMore = false;
-    console.log('stopped')
 
   });
 
 }
 
-function showSlides() {
-  console.log('new post');
+async function showSlides() {
+  
   var image = document.getElementsByTagName('img')[0];
   var video = document.getElementsByTagName('video')[0];
   if(image.src) {
@@ -165,32 +166,25 @@ function showSlides() {
     video.style.display = 'none';
     video.removeChild(video.firstChild);
   }
+  document.getElementById('loader').style.display = 'block';
+
   mediaIndex++;
   if(mediaIndex > media.length) {
     if(isGettingMore) {
-      console.log('in waiting');
-      document.getElementById('loader').style.display = 'block';
-
-      function waitUntilReady() {
-        if(isGettingMore) {
-          setTimeout(function() {
-            console.log('in loop');
-            waitUntilReady();
-          }, 1000);
-        }
+      isWaiting = true;
+      while(isGettingMore) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-      // TODO: fix bug when going through slides too fast. runs line 194 when out of bounds
-      waitUntilReady();
-      document.getElementById('loader').style.display = 'none';
+      isWaiting = false;
     } else {
       mediaIndex = 1;
     }
   }
   if(mediaIndex + 4 == media.length && hasNextPage) {
-    console.log('started');
     getNextPosts();
   }
-  console.log(mediaIndex + " " + media.length);
+  
+  document.getElementById('loader').style.display = 'none';
   if(media[mediaIndex - 1].includes('mp4')) {
     video.style.display = 'grid';
     var source = document.createElement('source');
@@ -201,11 +195,34 @@ function showSlides() {
   } else {
     image.style.display = 'grid';
     image.src = media[mediaIndex - 1];
-    setTimeout(showSlides, 1000); // Change to next media after 5 seconds
+    timer = setTimeout(showSlides, 5000); // Change to next media after 5 seconds
   }
+
 }
 
 // Change to next media after video ends
 document.getElementsByTagName('video')[0].onended = function(e) {
   showSlides();
+}
+
+function plusSlides(num) {
+
+  var video = document.getElementsByTagName('video')[0];
+  
+  if(!timer && !video.firstChild || isWaiting || mediaIndex == 1 && num == -1 && hasNextPage) {
+    return;
+  }
+
+  if(mediaIndex == 1 && num == -1 && !hasNextPage) {
+    mediaIndex = media.length;
+  }
+
+  if(video.firstChild) {
+    video.pause();
+  } else {
+    clearTimeout(timer);
+  }
+  mediaIndex += num - 1;
+  showSlides();
+
 }
