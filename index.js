@@ -2,12 +2,16 @@ const queryHash = 'f2405b236d85e8296cf30347c9f08c2a';
 var postIDs = [],
     media = [],
     mediaIndex = 0,
+    ms = 5000,
     id = '',
     endCursor = '',
     hasNextPage = false,
     first = true,
     isGettingMore = false,
     isWaiting = false,
+    isPaused = false,
+    start,
+    timeRemaining = 0,
     timer;
 
 var startT;
@@ -16,7 +20,7 @@ window.onload = async() => {
 
   var username = prompt("Enter the username of the public Instagram profile you would like to slideshow.");
 
-  startT = new Date();
+  startT = Date.now();
 
   var isValid = await isValidUsername(username);
 
@@ -24,9 +28,9 @@ window.onload = async() => {
     username = prompt("Invalid Username or profile is private.\nEnter the username of the public Instagram page you would like to slideshow.");
     isValid = await isValidUsername(username);
   }
-  //console.log('finished checking valid:' + (new Date() - startT));
+  //console.log('finished checking valid:' + (Date.now() - startT));
   await getFirstPostIDsSet(username);
-  //console.log('finished getting first set:' + (new Date() - startT));
+  //console.log('finished getting first set:' + (Date.now() - startT));
 
   await Promise.all(postIDs.map(item => getMediaFromPost(item)));
 
@@ -103,7 +107,7 @@ async function getMediaFromPost(postID) {
     first = false;
     console.log('finished first post:' + (new Date() - startT));
     document.getElementById('loader').style.display = 'none';
-    showSlides();
+    showSlides(ms);
   }
 
 }
@@ -155,7 +159,7 @@ async function getNextPosts() {
 
 }
 
-async function showSlides() {
+async function showSlides(interval) {
 
   var image = document.getElementsByTagName('img')[0];
   var video = document.getElementsByTagName('video')[0];
@@ -195,14 +199,54 @@ async function showSlides() {
   } else {
     image.style.display = 'grid';
     image.src = media[mediaIndex - 1];
-    timer = setTimeout(showSlides, 5000); // Change to next media after 5 seconds
+    timeRemaining = ms;
+    start = Date.now();
+    timer = setTimeout(function() {
+      showSlides(ms);
+    }, interval); // Change to next media after 5 seconds
   }
 
 }
 
 // Change to next media after video ends
 document.getElementsByTagName('video')[0].onended = function(e) {
-  showSlides();
+  showSlides(ms);
+}
+
+document.addEventListener('keydown', function(event) {
+    if(event.keyCode == 37) {
+        plusSlides(-1);
+    } else if(event.keyCode == 39) {
+        plusSlides(1);
+    } else if(event.keyCode == 32) {
+      toggleTimer();
+    }
+});
+
+document.getElementsByTagName('img')[0].addEventListener('click', toggleTimer);
+document.getElementsByTagName('video')[0].addEventListener('click', toggleTimer);
+
+function toggleTimer() {
+  if(isPaused) {
+    var video = document.getElementsByTagName('video')[0];
+    if(video.firstChild) {
+      video.play();
+    } else {
+      start = Date.now();
+      timer = setTimeout(function() {
+        showSlides(ms);
+      }, timeRemaining);
+    }
+  } else {
+    var video = document.getElementsByTagName('video')[0];
+    if(video.firstChild) {
+      video.pause();
+    } else {
+      timeRemaining -= Date.now() - start;
+      clearTimeout(timer);
+    }
+  }
+  isPaused = !isPaused;
 }
 
 function shuffle(array) {
@@ -243,6 +287,6 @@ function plusSlides(num) {
     clearTimeout(timer);
   }
   mediaIndex += num - 1;
-  showSlides();
+  showSlides(ms);
 
 }
