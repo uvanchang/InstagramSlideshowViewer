@@ -17,6 +17,7 @@ var startT;
 
 window.onload = async() => {
 
+  // TODO: Make html page for input instead of prompt
   var username = prompt("Enter the username of the public Instagram profile you would like to slideshow.");
 
   startT = Date.now();
@@ -156,7 +157,7 @@ async function getNextPosts() {
 
 async function showSlides(interval) {
 
-  var image = document.getElementsByTagName('img')[0];
+  var image = document.getElementById('main-image');
   var video = document.getElementsByTagName('video')[0];
   if(image.src) {
     image.style.display = 'none';
@@ -209,20 +210,26 @@ document.getElementsByTagName('video')[0].onended = function(e) {
 }
 
 document.addEventListener('keydown', function(event) {
-    if(event.keyCode == 37) {
-        plusSlides(-1);
-    } else if(event.keyCode == 39) {
-        plusSlides(1);
-    } else if(event.keyCode == 32) {
-      toggleTimer();
-    }
+  if(event.keyCode == 37) {
+    plusSlides(-1);
+  } else if(event.keyCode == 39) {
+    plusSlides(1);
+  } else if(event.keyCode == 32) {
+    toggleTimer();
+  }
 });
 
-document.getElementsByTagName('img')[0].addEventListener('click', toggleTimer);
+document.getElementById('main-image').addEventListener('click', toggleTimer);
 document.getElementsByTagName('video')[0].addEventListener('click', toggleTimer);
 
 function toggleTimer() {
+  var image =  document.getElementById('play-pause');
   if(isPaused) {
+    image.src = 'img/play.png';
+    image.style.display = 'grid';
+    image.style.animation = 'none';
+    image.offsetHeight; /* trigger reflow */
+    image.style.animation = null;
     var video = document.getElementsByTagName('video')[0];
     if(video.firstChild) {
       video.play();
@@ -233,6 +240,11 @@ function toggleTimer() {
       }, timeRemaining);
     }
   } else {
+    image.src = 'img/pause.png';
+    image.style.display = 'grid';
+    image.style.animation = 'none';
+    image.offsetHeight; /* trigger reflow */
+    image.style.animation = null;
     var video = document.getElementsByTagName('video')[0];
     if(video.firstChild) {
       video.pause();
@@ -278,6 +290,7 @@ function plusSlides(num) {
   } else {
     clearTimeout(timer);
   }
+  isPaused = false;
   mediaIndex += num - 1;
   showSlides(ms);
 

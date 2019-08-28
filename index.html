@@ -5,6 +5,7 @@
   <style>
 
     /* TODO: fix the small black bar at the bottom on Mac */
+    /* TODO: add crossfade on images/videos */
 
     * {
       line-height: 0;
@@ -18,7 +19,8 @@
     }
 
     /* TODO: fix so that smaller images fit the screen */
-    img {
+    #main-image {
+      z-index: 1;
       padding: 0;
       display: none;
       margin: 0 auto;
@@ -29,17 +31,39 @@
       position: absolute;
       top: 50%;
       left: 50%;
-      -ms-transform: translate(-50%, -50%);
       transform: translate(-50%, -50%);
     }
 
-    /* TODO: fix so that videos are centered with no scroll bar */
+    /* TODO: fix so that videos are horizontally centered with no scroll bar */
     video {
       padding: 0;
       display: none;
       margin: 0 auto;
       height: 100vh;
       min-width: 130vh;
+    }
+
+    #play-pause {
+      z-index: 2;
+      display: none;
+      animation-name: fade;
+      animation-duration: 2s;
+      animation-fill-mode: forwards;
+      padding: 0;
+      margin: 0 auto;
+      max-width: 100%;
+      max-height: 100%;
+      height: auto;
+      width: auto;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    @keyframes fade {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
     }
 
     #loader {
@@ -50,10 +74,10 @@
       width: 120px;
       height: 120px;
       animation: spin 2s linear infinite;
+      padding: 0;
       position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
+      top: calc(50% - 76px);
+      left: calc(50% - 76px);
       transform: translate(-50%, -50%);
     }
 
@@ -95,12 +119,12 @@
 <body>
 
   <div id="loader"></div>
-  <img>
+  <img id="play-pause">
+  <img id="main-image">
   <video muted></video>
   <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
   <a class="next" onclick="plusSlides(1)">&#10095;</a>
 
-  <script type="text/javascript" src="./jquery-3.4.1.min.js"></script>
   <script type="text/javascript" src="./index.js"></script>
 
 </body>
