@@ -1,12 +1,11 @@
-const queryHash = 'f2405b236d85e8296cf30347c9f08c2a';
+const queryHash = 'f2405b236d85e8296cf30347c9f08c2a',
+      ms = 5000;
 var postIDs = [],
     media = [],
     mediaIndex = 0,
-    ms = 5000,
     id = '',
     endCursor = '',
     hasNextPage = false,
-    first = true,
     isGettingMore = false,
     isWaiting = false,
     isPaused = false,
@@ -28,12 +27,14 @@ window.onload = async() => {
     username = prompt("Invalid Username or profile is private.\nEnter the username of the public Instagram page you would like to slideshow.");
     isValid = await isValidUsername(username);
   }
-  //console.log('finished checking valid:' + (Date.now() - startT));
+
   await getFirstPostIDsSet(username);
-  //console.log('finished getting first set:' + (Date.now() - startT));
+  await getMediaFromPost(postIDs[0]);
+  document.getElementById('loader').style.display = 'none';
+  showSlides(ms);
 
-  await Promise.all(postIDs.map(item => getMediaFromPost(item)));
-
+  await Promise.all(postIDs.slice(1).map(item => getMediaFromPost(item)));
+  
 }
 
 async function isValidUsername(username) {
@@ -75,6 +76,7 @@ async function getFirstPostIDsSet(username) {
     for(var i = 0; i < edges.length; i++) {
       postIDs.push(edges[i].node.shortcode);
     }
+    postIDs = shuffle(postIDs);
 
   });
 
@@ -87,7 +89,7 @@ async function getMediaFromPost(postID) {
 
     try { // has multiple media
       for(var picture of data.graphql.shortcode_media.edge_sidecar_to_children.edges) {
-	       if(picture.node.is_video) {
+        if(picture.node.is_video) {
           media.push(picture.node.video_url);
         } else {
           media.push(picture.node.display_url);
@@ -102,13 +104,6 @@ async function getMediaFromPost(postID) {
     }
 
   });
-
-  if(first) {
-    first = false;
-    console.log('finished first post:' + (new Date() - startT));
-    document.getElementById('loader').style.display = 'none';
-    showSlides(ms);
-  }
 
 }
 
@@ -133,21 +128,21 @@ async function getNextPosts() {
     hasNextPage = data.data.user.edge_owner_to_timeline_media.page_info.has_next_page;
     const edges = data.data.user.edge_owner_to_timeline_media.edges;
 
-    for(var i = 0; i < edges.length; i++) {
+    for(var edge of shuffle(edges)) {
 
       try { // has multiple media
-        for(var picture of edges[i].node.edge_sidecar_to_children.edges) {
-  	       if(picture.node.is_video) {
+        for(var picture of edge.node.edge_sidecar_to_children.edges) {
+          if(picture.node.is_video) {
             media.push(picture.node.video_url);
           } else {
             media.push(picture.node.display_url);
           }
         }
       } catch(err) { // has single media
-        if(edges[i].node.is_video) {
-          media.push(edges[i].node.video_url);
+        if(edge.node.is_video) {
+          media.push(edge.node.video_url);
         } else {
-          media.push(edges[i].node.display_url);
+          media.push(edge.node.display_url);
         }
       }
 
@@ -252,14 +247,11 @@ function toggleTimer() {
 function shuffle(array) {
   var currentIndex = array.length, temporaryValue, randomIndex;
 
-  // While there remain elements to shuffle...
   while (0 !== currentIndex) {
 
-    // Pick a remaining element...
     randomIndex = Math.floor(Math.random() * currentIndex);
     currentIndex -= 1;
 
-    // And swap it with the current element.
     temporaryValue = array[currentIndex];
     array[currentIndex] = array[randomIndex];
     array[randomIndex] = temporaryValue;
@@ -290,3 +282,4 @@ function plusSlides(num) {
   showSlides(ms);
 
 }
+
